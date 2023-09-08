@@ -1,0 +1,11 @@
+HOW TO USE THE BIOLINUX WORKSTATION
+
+HYBIRD working
+Use the Biolinux workstation 
+Login with your personal account then create your folder with your name under home directory
+
+REMOTE connection (リーモ接続）
+Login remotely from your terminal. Try ssh to connect 133.28.117.133 or 133.28.117.144
+You can upload script file via ftp-ssh.
+#Necessary Software
+#Teraterm: remotly imput Linux command to Biolinux workstation
