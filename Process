@@ -1,0 +1,19 @@
+Analysis Process
+
+1. SAMPLING
+Collect the wastewater, soil, sludge samples in Wastewater Treatment Plants and Retrieving rivers.
+River flowrate and other environment condition.
+(Pre-treatment with Hollow-fiber UF membrane)
+
+2. DNA EXTRACTION
+
+3. ANALYSIS
+a.qPCR
+- 16s rRNA
+- potential ARG primer candidates which popular in Wastewater Treatment Plants and Retrieving rivers
+b. NGS analysis with HiSeq, Illumina
+- Quality Control
+- Filtering
+- Blast
+c. Statistical Computing
+- PCA
