@@ -6,3 +6,5 @@ The field of molecular biology is set to see the growth in demand over the next 
 There are a lot of niches in this sector, specially NSG, STEMCELL or BIODATA ANALYSIS (BIOINFORMATICS). Bioinformatic is a new sector combinate in computer science and biology. In order to teach yourself how to do Bioinformatics, it is important you start with learning a programming language If you are not familiar with programming already. Then you can begin reading data and running statistics, as well as completing a project where you put your findings together.
 
 It is important to note that Bioinformatic is a very large field, so if you are interested in self-learning, then maybe this is for you. 
+
+In this Repository, I wrote down my remotely working flow on NIG Supercomputer for Metagenomics Analysis. Other working flow for #Sampling, #DNA extraction, #qPCR and #Data Statistical (PCA) will be update later.
