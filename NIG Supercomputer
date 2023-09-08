@@ -1,0 +1,10 @@
+1. Prepare your account
+Apply your own account. It will take around 1 week to create a new account.
+	See details at application webpage: https://sc.ddbj.nig.ac.jp/ja/application
+Generate public key and private key for SSH connection, then register the public key to NIG. 
+Login by terminal via gw2.ddbj.nig.ac.jp to use Phase 2 system.
+	Check the link: https://sc2.ddbj.nig.ac.jp/index.php/ja-howtouse
+Login via ftp to gw2.ddbj.nig.ac.jp to upload your files.   
+	Check the link https://sc2.ddbj.nig.ac.jp/index.php/ja-file-transfer
+
+2. Using NIG supercomputer
