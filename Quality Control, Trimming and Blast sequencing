@@ -1,0 +1,313 @@
+-------------------------------**PREPARATION for Linux analyze via NIG**---------------------------------------
+
+Necessary Software:
+- Teraterm: run Linux command via supercomputer NIG
+- WinSCP: upload file to Supercomputer NIG
+- Gedit software for analysis the Blast result
+Necessary file:
+- secrectly password file
+- count_sample-gene_hits3-2.pl: Perl count step
+- aro_categories_index.txt: matching samples with data.
+- list_matching_v2.py: python scripts
+
+Useful Linux command:
+
+pwd:  it shows the directory you’re currently in.
+ls: It presents to you the contents of a particular directory – both files and directories. You will use this command alongside pwd to navigate your ways inside the mighty Unix filesystem.
+cd: change directory
+cd~: go back to the home directory
+more file_name: more details
+qstat: check the status of current job
+qdel IDjob: delete a job running by qstat
+gunzip *.gz: unzip all of gz files in currently directory.
+
+Note when you analysis via Super computer.
+- Always check the directory of the step.
+- If a script take too long time than the estimate time. You can delete and run it again.
+- To find a Biotool: change your directory to Biotool folder by the first letter of your Biotool.
+Example: cd /usr/local/biotools/p -> use the command: "ls" to view the tool exist in the folder.
+The target Biotool is Python  
+
+-------------------------------**Linux analyze via NIG - TRIMMING AND QUALITY**---------------------------------------
+#ALWAYS CHECK THE RESULT OF PREVIOUS STEP BEFORE DO NEXT STEP!!!
+
+#LOGIN TO TERATERM THEN USE THE COMMAND qlogin TO START WORKING
+
+--------STEP 1:SCYTHE (about 15 mins) - 2 SEQUENCES--------
+
+#Run Scythe before quality - base trimming;
+#Get the quality information;
+#Pick out 3'-end adaptor "Poor quality bases". Scythe does not work on 5'-end or other contaminants;
+#Scythe does not work on FASTA file (FASTA file does not have information);
+#Scythe uses a naive Bayesian to classify contaminant substring;
+
+#Run this command:
+scythe -a /home/ryohonda/bin/scythe-master/illumina_adapters.fa /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-25.2.fastq -o /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-25out.2.fastq
+
+#The output file name as: SEMBOKU-25out.1.fastq
+
+
+--------STEP 2: CHANGE DIERECTORY - 2 SEQUENCES--------
+
+#Run this command:
+cd /home/ryohonda/bin
+
+
+--------STEP 3: RUN FastQ.tag.rb (about 5 mins)--------
+
+#Paire tagged reads from FASTQ file;
+
+#Run this command:
+./FastQ.tag.rb -i /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-25out.2.fastq -o /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-25.2.tg.fastq -s /2
+
+#The output file name as: SEMBOKU-25.1.tg.fastq
+
+
+#DynamicTrim and LengthSort are typically used in combination to remove poor quality bases and/or reads from high throughput sequence data;
+#Both programs should work on any FASTQ file (modified or unmodified, compressed or not);
+#The SolexaQA program automatically detects input FASTQ file formats (i.e., the Sanger, Illumina and Solexa formats described by Cock et al. 2010); 
+#It is designed to run on single-end or paired-end data, including reads from the latest versions of the HiSeq and MiSeq machines;
+#High quality graphics are produced by interfacing automatically with R;
+
+--------STEP 4: PERFORM DYNAMICTRIM (about 1 hour) - 2 SEQUENCES--------
+
+#DynamicTrim — a read trimmer that individually crops each read to its longest contiguous segment 
+#for which quality scores are greater than a user-supplied quality cutoff (or alternately, the read segment returned by the BWA trimming algorithm);
+
+cd /home/ryohonda/Huy/huy/scripts_
+#UPLOAD THE SCRIPT 
+
+!/bin/sh
+#$ -S /bin/sh
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+
+module load singularity
+singularity exec /usr/local/biotools/s/solexaqa:3.1.7.1--hd1e57f0_0 SolexaQA++ dynamictrim /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-25.1.tg.fastq -h 20 -d /home/ryohonda/Huy/huy/Data/02.trimmed_reads
+
+Then run qsub to submit the script by this command
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 Solexa_dynamictrim_SEMBOKU_25_1.sh
+
+#Note: 
+- Before run qsub change directory to the folder contain the script file.
+- Step 1 to 4 use for both direction of sequence.
+- Always check the result files before do next step.
+- The result file of STEP 4 as [name sequence.tg.fastq.trimmed]
+
+From here on, two files 1 and 2 will be processed simultaneously
+
+--------STEP 5:LENGTHSORT (about 2 hours)--------
+
+#LengthSort — a program to separate high quality reads from low quality reads;
+#LengthSort assigns trimmed reads to paired-end, singleton and discard files based on a user-defined length cutoff;
+
+UPLOAD THE SCRIPT                         
+
+#!/bin/bash
+#$ -S /bin/bash
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+
+module load r/3.5.2
+module load singularity/3.4.1
+export LANG=C
+export SINGULARITY_BIND="/opt/pkg/r/3.5.2:/opt/pkg/r/3.5.2,/lib64:/lib64"
+export SINGULARITY_BINDPATH="/opt/pkg/r/3.5.2/bin/R:/usr/local/bin/R,/opt/pkg/r/3.5.2/bin/Rscript:/usr/local/bin/Rscript"
+export SINGULARITYENV_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+
+singularity exec /usr/local/biotools/s/solexaqa:3.1.7.1--hd1e57f0_0 SolexaQA++ lengthsort /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.1.tg.fastq.trimmed /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.2.tg.fastq.trimmed -l 50 -d /home/ryohonda/Huy/huy/Data/02.trimmed_reads
+
+Then run qsub to submit the script by this command:
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 lengthsort_SEMBOKU_25.sh
+
+The output file name as "name.trimmed.paired"
+
+--------STEP 6: TRIMMOMATIC--------
+
+UPLOAD THE SCRIPT
+
+#!/bin/sh
+#$ -S /bin/sh
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+module load singularity	
+singularity exec /usr/local/biotools/t/trimmomatic:0.36--6 trimmomatic PE -threads 10  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.1.tg.fastq.trimmed.paired  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.2.tg.fastq.trimmed.paired  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.1.clipped.fastq  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.1.clipped.single.fastq  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.2.clipped.fastq  /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.2.clipped.single.fastq ILLUMINACLIP:/home/ryohonda/Huy/bin/Adapters/adapters/NexteraPE-PE.fa:2:30:10 MINLEN:50
+
+Then run the script by this command:
+
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 Trimmomatic_SEMBOKU_25.sh
+
+the output file name as "name.clipped.fastq and name.clipped.single.fastq"
+
+--------STEP 7: RUN FASTQC (about 30 mitues or more)--------
+
+UPLOAD THE SCRIPT
+
+#!/bin/sh
+#$ -S /bin/sh
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+module load singularity	
+singularity exec /usr/local/biotools/f/fastqc:0.11.9--0  fastqc /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.1.clipped.fastq /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-29.2.clipped.fastq -o /home/ryohonda/Huy/huy/Data/Fastqc
+
+Then run the script by this command:
+
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 Fastqc_Sem22.sh
+
+the output file name as [SEMBOKU-29.1.clipped_fastqc.zip] and [SEMBOKU-29.2.clipped_fastqc.zip]
+
+
+--------STEP 8: UNZIP FASTQC RESULT AND CHECK THE RESULT--------
+
+	cd /home/ryohonda/Huy/huy/Data/Fastqc
+
+#unzip SEMBOKU-24.1.clipped_fastqc.zip
+
+#Note: change your directory to your location zip files. 
+#Use this command to see more details in your summary.txt file:
+
+more summary.txt
+
+#IF THE “Per base sequence quality” IS PASS THEN IT IS GOOD. IF NOT, PLEASE DISCUSS WITH YOUR SUPERVISOR.
+
+--------STEP 8: DO SOLEXAQA++ ANALYSIS - 2 SEQUENCES (about 15 minutes or more)--------
+
+UPLOAD THE SCRIPT
+
+#!/bin/bash
+#$ -S /bin/bash
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+
+module load r/3.5.2
+module load singularity/3.4.1
+export LANG=C
+export SINGULARITY_BIND="/opt/pkg/r/3.5.2:/opt/pkg/r/3.5.2,/lib64:/lib64"
+export SINGULARITY_BINDPATH="/opt/pkg/r/3.5.2/bin/R:/usr/local/bin/R,/opt/pkg/r/3.5.2/bin/Rscript:/usr/local/bin/Rscript"
+export SINGULARITYENV_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+
+singularity exec /usr/local/biotools/s/solexaqa:3.1.7.1--hd1e57f0_0 SolexaQA++ /home/ryohonda/Huy/huy/Data/01.raw_reads/SEMBOKU-29.2.fastq -h 20 -d /home/ryohonda/Huy/huy/Data/03.reads_quality/Solexa -v -m
+
+Then run the script by this command:
+
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 Solexa_analysis_SEMBOKU_25_1.sh
+
+--------STEP 9: CONVERT FASTQ FILE TO FASTA FILE - 2 SEQUENCES (about 15 minutes or more)--------
+
+#Run this command:
+FastQ.toFastA.awk /home/ryohonda/Huy/huy/Data/02.trimmed_reads/SEMBOKU-25.2.clipped.fastq > /home/ryohonda/Huy/huy/Data/04.trimmed_fasta/SEMBOKU-25.2.clipped.fasta
+
+#Reason to convert FASTA to FASTQ (include 4 rows, the first one is the same with FASTA data file) format:
+- FASTQ get more information than FASTA file
+- Also includign string
+- Quality string
+
+--------STEP 10: COMBINATE 2 FASTA FILES INTO 1--------
+
+Run this command:
+FastA.interpose.pl /home/ryohonda/Huy/huy/Data/04.trimmed_fasta/SEMBOKU-25.CoupledReads.fasta /home/ryohonda/Huy/huy/Data/04.trimmed_fasta/SEMBOKU-25.1.clipped.fasta /home/ryohonda/Huy/huy/Data/04.trimmed_fasta/SEMBOKU-25.2.clipped.fasta
+
+
+-------------------------------**FINISH TRIMMING AND QUALITY CHECK HERE**---------------------------------------
+
+
+
+
+----------------------------------------------**BLAST HERE**----------------------------------------------------
+
+--------STEP 1:DOWNLOAD THE DATABASE--------
+
+download the database on http:// card.mcmaster.ca/
+
+--------STEP 2:RUN BLASTN--------
+
+UPLOAD THE SCRIPT
+
+#!/bin/sh
+#$ -S /bin/sh
+#$ -o /home/ryohonda/Huy/job_out/
+#$ -e /home/ryohonda/Huy/job_out/
+
+module load singularity
+singularity exec /usr/local/biotools/b/blast\:2.7.1--boost1.64_1 blastn\
+ -query /home/ryohonda/Huy/huy/Data/04.trimmed_fasta/SEMBOKU-29.CoupledReads.fasta\
+ -db /home/ryohonda/Huy/huy/Database/card-data/nucleotide_fasta_protein_homolog_model.fasta\
+ -out /home/ryohonda/Huy/huy/Data/Blast/Blast_output_SEMBOKU_29\
+ -num_threads 20\
+ -max_target_seqs 1\
+ -evalue 1E-5\
+ -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen"
+
+Then run the script by this command:
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 blast_CARD_SEM22.sh
+
+the output file at Blast folder, please check it before do next step.
+
+--------STEP 3:AWK-------- 2 seconds
+
+Run this command:
+awk '{if($3 >= 90 && $4 >= 25)print$0}' /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Blast_output_SEMBOKU_25 > /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Filtered/SEMBOKU-25.filt.txt
+
+the output file at Filter folder, name as <name.filt.txt>
+
+--------STEP 3:COUNT-------- 2seconds
+
+
+Run this command:
+sed 's/-/_/g' /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Filtered/SEMBOKU-25.filt.txt > /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Filtered/SEMBOKU-25.count.txt
+
+the output file at Filter folder, name as <name.count.txt>
+
+--------STEP 4:ANALYSIS COUNT FILES--------
+
+Open the result file of previous step <name.count.txt> by Excel.
+Check the "Tab" tab and uncheck "Others" tab. Then open it.
+Delete the last column and insert a column on the left of "C column" then fill it by "*". Then save it.
+
+--------STEP 5: OPEN IN GEDIT--------
+
+open <name.count.txt> file in Gedit software and replace "*" by "|"
+
+--------STEP 6: RUN COUNT SAMPLE--------
+
+change your directory to Blast folder.
+cd /home/ryohonda/Huy/huy/Data/Blast
+Then run this command:
+chmod 0755 count_sample-gene_hits3-2.pl
+
+--------STEP 7: RUN COUNT SAMPLE--------
+
+Run this command:
+perl ./count_sample-gene_hits3-2.pl /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Filtered/SEMBOKU-25.count.txt > /home/ryohonda/Huy/SEMBOKU_Single_Winter_21-29/Data/Blast/Filtered/SEMBOKU-25.m.txt
+
+--------STEP 8: ARRANGE THE RESULT ON EXCEL--------
+
+Open the result file of previous step <name.m.txt> on Excel then copy B column to another txt file, name it as <name.txt>
+
+--------STEP 9: MATCHING INFORMATION BY PYTHON--------
+
+Necessary files: 
+- list_matching_v2.py: Python script file
+- aro_categories_index.txt: Matching file
+- <name.txt>: previous result file. Please remove If any line start by number, It will make an error matching when you run python.
+
+Open the list_matching_v2.py file then change the  pattern = '<name.txt>' and outfile = open('<result file name.txt>', 'w+')
+Then run python file by this command:
+singularity exec /usr/local/biotools/p/python:3.7.1 /home/ryohonda/Huy/huy/Data/Blast/Matching/list_matching_v2.py 
+
+--------STEP 10: ARRANGE THE FINAL RESULT ON EXCEL--------
+
+**Please reference the arranging in word file.
+
+
+-----------------------------FINISH BLAST HERE--------------------
+
+TOTAL 16S READS
+Analyze by Parallel - META
+
+Create your file seqlist.txt and meta.txt then input this command:
+
+singularity exec /usr/local/biotools/p/parallel:20180322-0 -i seqslist.txt -m meta.txt -o out_2 -C 1
+
+cd /home/ryohonda/Huy/huy/scripts_
+qsub -pe def_slot 20 -l d_rt=240:00:00 -l s_rt=240:00:00 Parallel_26.sh
